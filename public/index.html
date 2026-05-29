@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agenda de Salones - Panel Administrativo</title>
+    <!-- Inter Font para un diseño limpio y moderno -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app" class="layout">
+        <!-- Sidebar Overlay (mobile backdrop) -->
+        <div class="sidebar-overlay" :class="{ active: isSidebarOpen }" @click="isSidebarOpen = false"></div>
+
+        <!-- Sidebar Navigation (Flat and Minimal) -->
+        <aside class="sidebar" :class="{ open: isSidebarOpen }">
+            <div class="brand">
+                <h1>Administración</h1>
+                <span class="subtitle">Agenda de Eventos</span>
+            </div>
+            
+            <nav class="nav-menu">
+                <a href="#" class="nav-item" :class="{ active: currentView === 'month' }" @click.prevent="changeView('month'); isSidebarOpen = false">Agenda Mensual</a>
+                <a href="#" class="nav-item" :class="{ active: currentView === 'week' }" @click.prevent="changeView('week'); isSidebarOpen = false">Agenda Semanal</a>
+                <a href="#" class="nav-item" :class="{ active: currentView === 'day' }" @click.prevent="changeView('day'); isSidebarOpen = false">Agenda Diaria</a>
+                <a href="#" class="nav-item" :class="{ active: currentView === 'list' }" @click.prevent="changeView('list'); isSidebarOpen = false">Listado de Eventos</a>
+                <a href="#" class="nav-item" :class="{ active: currentView === 'clients' }" @click.prevent="changeView('clients'); isSidebarOpen = false">Clientes</a>
+                <a href="#" class="nav-item" :class="{ active: currentView === 'summary' }" @click.prevent="changeView('summary'); isSidebarOpen = false" style="margin-top: 16px; border-top: 1px solid var(--border-color); border-radius: 0; padding-top: 16px; color: #198754;">Resumen Financiero</a>
+            </nav>
+
+            <div class="legend">
+                <h3>Leyenda de Salones</h3>
+                <div class="legend-item">
+                    <span class="color-dot color-grande"></span> Salón Grande
+                </div>
+                <div class="legend-item">
+                    <span class="color-dot color-chico"></span> Salón Chico
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <header class="topbar">
+                <button class="hamburger-btn" @click="isSidebarOpen = !isSidebarOpen">
+                    <span></span><span></span><span></span>
+                </button>
+                <div class="month-selector" v-if="['month', 'week', 'day', 'summary'].includes(currentView)">
+                    <button class="btn-icon" @click="prevPeriod">&larr;</button>
+                    <h2 v-if="currentView === 'month'">{{ currentMonthName }} {{ currentYear }}</h2>
+                    <h2 v-else-if="currentView === 'week'">Semana del {{ weekDays[0].number }} al {{ weekDays[6].number }}</h2>
+                    <h2 v-else-if="currentView === 'day'">{{ currentDay.name }}</h2>
+                    <h2 v-else-if="currentView === 'summary'">Resumen {{ currentMonthName }} {{ currentYear }}</h2>
+                    <button class="btn-icon" @click="nextPeriod">&rarr;</button>
+                </div>
+                <div class="month-selector" v-else>
+                    <h2 style="text-transform: capitalize;">{{ currentView === 'list' ? 'Listado de Eventos' : 'Gestión de Clientes' }}</h2>
+                </div>
+                <div class="actions">
+                    <button class="btn-primary" @click="openModal">Nueva Reserva</button>
+                </div>
+            </header>
+
+            <!-- Flat Calendar Grid (Month View) -->
+            <div class="calendar-wrapper" v-if="currentView === 'month'">
+                <div class="calendar-header">
+                    <div class="day-name">Lunes</div>
+                    <div class="day-name">Martes</div>
+                    <div class="day-name">Miércoles</div>
+                    <div class="day-name">Jueves</div>
+                    <div class="day-name">Viernes</div>
+                    <div class="day-name">Sábado</div>
+                    <div class="day-name">Domingo</div>
+                </div>
+                <div class="calendar-grid">
+                    <div class="calendar-cell" v-for="day in calendarDays" :key="day.date" :class="{'out-of-month': !day.isCurrentMonth}">
+                        <div class="date-number">{{ day.number }}</div>
+                        
+                        <!-- Events List for the Day -->
+                        <div class="events-container">
+                            <div v-for="event in day.events" :key="event.id" 
+                                 class="event-badge" 
+                                 :class="event.hall === 'grande' ? 'badge-grande' : 'badge-chico'"
+                                 @click="viewEvent(event.raw)">
+                                <span class="event-time">{{ event.time }}</span>
+                                <span class="event-title">{{ event.title }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Events List View -->
+            <div class="list-wrapper" v-else-if="currentView === 'list'">
+                <table class="flat-table">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Horario</th>
+                            <th>Salón</th>
+                            <th>Cliente</th>
+                            <th>Tipo de Evento</th>
+                            <th>Pagos</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="event in allEventsList" :key="event.id">
+                            <td>{{ event.event_date }}</td>
+                            <td>{{ event.start_time.substring(0,5) }} - {{ event.end_time.substring(0,5) }}</td>
+                            <td>{{ event.hall.name }}</td>
+                            <td>{{ event.client_name }}</td>
+                            <td>{{ event.event_type }}</td>
+                            <td style="width: 150px;">
+                                <div style="display: flex; flex-direction: column; gap: 4px;">
+                                    <div style="font-size: 0.8rem; display: flex; justify-content: space-between;">
+                                        <span style="font-weight: 600;">${{ calculateEventDeposit(event) }}</span>
+                                        <span style="color: var(--text-muted);">${{ event.total_amount }}</span>
+                                    </div>
+                                    <div style="width: 100%; height: 6px; background-color: var(--border-color); border-radius: 3px; overflow: hidden;">
+                                        <div :style="{ width: Math.min(((calculateEventDeposit(event) / (event.total_amount || 1)) * 100), 100) + '%', backgroundColor: (calculateEventDeposit(event) >= event.total_amount) ? '#198754' : '#0d6efd', height: '100%' }"></div>
+                                    </div>
+                                    <div style="font-size: 0.75rem; text-align: right; color: var(--text-muted);">
+                                        {{ Math.round((calculateEventDeposit(event) / (event.total_amount || 1)) * 100) || 0 }}%
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="status-badge" :class="'status-' + event.status">{{ event.status }}</span>
+                            </td>
+                        </tr>
+                        <tr v-if="allEventsList.length === 0">
+                            <td colspan="7" style="text-align: center; padding: 32px; color: var(--text-muted);">No hay eventos registrados.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Clients View -->
+            <div class="list-wrapper" v-else-if="currentView === 'clients'">
+                <table class="flat-table">
+                    <thead>
+                        <tr>
+                            <th>Nombre del Cliente</th>
+                            <th>Contacto</th>
+                            <th>Total Eventos</th>
+                            <th>Último Evento</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="client in uniqueClients" :key="client.name">
+                            <td>{{ client.name }}</td>
+                            <td>{{ client.contact }}</td>
+                            <td>{{ client.eventsCount }}</td>
+                            <td>{{ client.lastEventDate }}</td>
+                        </tr>
+                        <tr v-if="uniqueClients.length === 0">
+                            <td colspan="4" style="text-align: center; padding: 32px; color: var(--text-muted);">No hay clientes para mostrar en este mes.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Weekly View -->
+            <div class="calendar-wrapper" v-else-if="currentView === 'week'">
+                <div class="calendar-header">
+                    <div class="day-name" v-for="day in weekDays" :key="day.date">
+                        {{ day.name }} {{ day.number }}
+                    </div>
+                </div>
+                <div class="calendar-grid" style="grid-template-rows: 1fr; height: 100%;">
+                    <div class="calendar-cell" v-for="day in weekDays" :key="day.date" :class="{'out-of-month': !day.isToday && false}">
+                        <div class="events-container">
+                            <div v-for="event in day.events" :key="event.id" 
+                                 class="event-badge" 
+                                 :class="event.hall === 'grande' ? 'badge-grande' : 'badge-chico'"
+                                 style="white-space: normal; margin-bottom: 8px; padding: 8px;"
+                                 @click="viewEvent(event.raw)">
+                                <div class="event-time" style="margin-bottom: 4px;">{{ event.time }}</div>
+                                <div class="event-title">{{ event.title }}</div>
+                            </div>
+                            <div v-if="day.events.length === 0" style="text-align: center; color: var(--text-muted); font-size: 0.85rem; padding-top: 20px;">
+                                Sin eventos
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Daily View -->
+            <div class="calendar-wrapper" v-else-if="currentView === 'day'">
+                <div style="max-width: 800px; margin: 0 auto; width: 100%;">
+                    <div v-for="event in currentDay.events" :key="event.id" 
+                         class="event-badge" 
+                         :class="event.hall === 'grande' ? 'badge-grande' : 'badge-chico'"
+                         style="white-space: normal; margin-bottom: 16px; padding: 16px; display: flex; flex-direction: column; gap: 8px;"
+                         @click="viewEvent(event.raw)">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span class="event-time" style="font-size: 1.2rem;">{{ event.time }}</span>
+                            <span class="status-badge" :class="'status-' + event.status">{{ event.status }}</span>
+                        </div>
+                        <div class="event-title" style="font-size: 1.1rem;">{{ event.title }}</div>
+                        <div style="color: var(--text-muted); font-size: 0.9rem;">
+                            <strong>Salón:</strong> {{ event.hall === 'grande' ? 'Grande' : 'Chico' }}
+                        </div>
+                        <div v-if="event.notes" style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">
+                            <strong>Notas:</strong> {{ event.notes }}
+                        </div>
+                    </div>
+                    <div v-if="currentDay.events.length === 0" style="text-align: center; color: var(--text-muted); padding: 40px;">
+                        No hay eventos programados para este día.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary View -->
+            <div class="calendar-wrapper" v-else-if="currentView === 'summary'">
+                <div style="max-width: 1000px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; gap: 24px;">
+                    <!-- Cards -->
+                    <div class="summary-grid-3" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;">
+                        <!-- Earning Card (Dark Blue) -->
+                        <div style="background-color: var(--bg-sidebar); padding: 24px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                            <h4 style="color: rgba(255,255,255,0.7); font-size: 0.85rem; margin-bottom: 8px;">Ingresos Totales</h4>
+                            <div style="font-size: 2rem; font-weight: 700; color: #ffffff;">${{ summaryData.totalIncome }}</div>
+                            <div style="font-size: 0.85rem; color: rgba(255,255,255,0.5); margin-top: 8px;">De {{ summaryData.totalEvents }} eventos este mes</div>
+                        </div>
+                        <!-- Share/Cash Card -->
+                        <div style="background-color: var(--bg-cards); padding: 24px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                            <div style="display: flex; justify-content: space-between;">
+                                <h4 style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 8px;">En Efectivo</h4>
+                                <span style="color: var(--primary-color);">💵</span>
+                            </div>
+                            <div style="font-size: 2rem; font-weight: 700; color: var(--text-main);">${{ summaryData.cashIncome }}</div>
+                        </div>
+                        <!-- Likes/Transfer Card -->
+                        <div style="background-color: var(--bg-cards); padding: 24px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                            <div style="display: flex; justify-content: space-between;">
+                                <h4 style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 8px;">Por Transferencia</h4>
+                                <span style="color: var(--primary-color);">💳</span>
+                            </div>
+                            <div style="font-size: 2rem; font-weight: 700; color: var(--text-main);">${{ summaryData.transferIncome }}</div>
+                        </div>
+                    </div>
+                    <!-- Charts -->
+                    <div class="summary-grid-2" style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+                        <div style="background-color: var(--bg-cards); padding: 24px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); height: 350px;">
+                            <h4 style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 16px;">Ingresos Tesorería</h4>
+                            <canvas id="chartPayment"></canvas>
+                        </div>
+                        <div style="background-color: var(--bg-cards); padding: 24px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); height: 350px; display: flex; flex-direction: column;">
+                            <h4 style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 16px;">Eventos por Salón</h4>
+                            <div style="flex: 1; position: relative;">
+                                <canvas id="chartHall"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Flat Modal for New/Edit Reservation (Hidden by default) -->
+        <div class="modal-overlay" v-if="isModalOpen" @click.self="closeModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Registrar Nueva Reserva</h3>
+                    <button class="btn-close" @click="closeModal">&times;</button>
+                </div>
+                <form class="flat-form" @submit.prevent="saveReservation">
+                    <div class="form-group">
+                        <label>Salón</label>
+                        <select v-model="form.hall_id" required class="flat-input">
+                            <option value="" disabled>Seleccionar salón...</option>
+                            <option v-for="hall in availableHalls" :key="hall.id" :value="hall.id">{{ hall.name }}</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Fecha del Evento</label>
+                            <input type="date" v-model="form.date" required class="flat-input">
+                        </div>
+                        <div class="form-group">
+                            <label>Horario</label>
+                            <div class="time-inputs">
+                                <input type="time" v-model="form.startTime" required class="flat-input">
+                                <span>-</span>
+                                <input type="time" v-model="form.endTime" required class="flat-input">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Cliente / Contacto</label>
+                        <input type="text" v-model="form.client" required class="flat-input" placeholder="Nombre completo">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Tipo de Evento</label>
+                        <input type="text" v-model="form.type" required class="flat-input" placeholder="Ej: Boda, Cumpleaños">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Seña Abonada ($)</label>
+                            <input type="number" step="0.01" v-model="form.depositAmount" class="flat-input" placeholder="0.00">
+                        </div>
+                        <div class="form-group">
+                            <label>Monto Total ($)</label>
+                            <input type="number" step="0.01" v-model="form.totalAmount" class="flat-input" placeholder="0.00">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Método de Pago</label>
+                        <select v-model="form.paymentMethod" required class="flat-input">
+                            <option value="efectivo">Efectivo</option>
+                            <option value="transferencia">Transferencia</option>
+                            <option value="mixto">Mixto (50/50)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Notas / Indicaciones</label>
+                        <textarea v-model="form.notes" class="flat-input" rows="3" placeholder="Detalles de armado, catering, requerimientos..."></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" @click="closeModal">Cancelar</button>
+                        <button type="submit" class="btn-primary">Guardar Reserva</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    <!-- Event Details Modal (Multi-Payment) -->
+    <div class="modal-overlay" v-if="isEventModalOpen" @click.self="closeEventModal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3>Detalles del Evento</h3>
+                <button class="btn-icon" @click="closeEventModal">&times;</button>
+            </div>
+            <div class="modal-body" v-if="activeEvent">
+                <div style="margin-bottom: 24px;">
+                    <h4 style="margin-bottom: 8px;">Información General</h4>
+                    <p><strong>Cliente:</strong> {{ activeEvent.client_name }}</p>
+                    <p><strong>Salón:</strong> {{ activeEvent.hall.name }}</p>
+                    <p><strong>Fecha y Hora:</strong> {{ activeEvent.event_date }} de {{ activeEvent.start_time.substring(0,5) }} a {{ activeEvent.end_time.substring(0,5) }}</p>
+                    <p><strong>Total:</strong> ${{ activeEvent.total_amount }}</p>
+                    <p><strong>Adeudado:</strong> <span style="color: #dc3545; font-weight: bold;">${{ activeEventBalance }}</span></p>
+                </div>
+
+                <div style="margin-bottom: 24px;">
+                    <h4 style="margin-bottom: 8px;">Historial de Pagos</h4>
+                    <table class="flat-table" style="margin-bottom: 16px;">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Método</th>
+                                <th>Monto</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="payment in activeEvent.payments" :key="payment.id">
+                                <td>{{ payment.payment_date }}</td>
+                                <td style="text-transform: capitalize;">{{ payment.payment_method }}</td>
+                                <td style="font-weight: 600;">${{ payment.amount }}</td>
+                            </tr>
+                            <tr v-if="!activeEvent.payments || activeEvent.payments.length === 0">
+                                <td colspan="3" style="text-align: center; color: var(--text-muted);">No hay pagos registrados.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div v-if="activeEventBalance > 0" style="background-color: var(--bg-sidebar); padding: 16px; border-radius: 8px;">
+                    <h4 style="margin-bottom: 12px; font-size: 0.9rem;">Registrar Nuevo Pago</h4>
+                    <form @submit.prevent="submitNewPayment">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Monto ($)</label>
+                                <input type="number" step="0.01" v-model="paymentForm.amount" class="flat-input" placeholder="0.00" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Método</label>
+                                <select v-model="paymentForm.method" required class="flat-input">
+                                    <option value="efectivo">Efectivo</option>
+                                    <option value="transferencia">Transferencia</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Fecha</label>
+                                <input type="date" v-model="paymentForm.date" class="flat-input" required>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
+                            <button type="submit" class="btn-primary">Añadir Pago</button>
+                        </div>
+                    </form>
+                </div>
+                <div v-else style="background-color: #d1e7dd; color: #0f5132; padding: 16px; border-radius: 8px; text-align: center; font-weight: bold;">
+                    El evento está totalmente abonado.
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <!-- Vue 3 & Chart.js CDN -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
