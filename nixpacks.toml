@@ -1,0 +1,14 @@
+[phases.setup]
+nixPkgs = ["php82", "php82Extensions.pdo_sqlite", "php82Extensions.mbstring", "php82Extensions.xml", "php82Extensions.curl", "php82Extensions.tokenizer", "php82Extensions.dom", "php82Extensions.fileinfo"]
+
+[phases.install]
+cmds = ["composer install --no-dev --optimize-autoloader"]
+
+[phases.build]
+cmds = [
+    "php artisan config:cache",
+    "php artisan route:cache"
+]
+
+[start]
+cmd = "touch database/database.sqlite && php artisan migrate --force && php artisan db:seed --force && php artisan serve --host=0.0.0.0 --port=${PORT:-8080}"
