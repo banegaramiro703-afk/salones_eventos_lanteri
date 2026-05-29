@@ -13,7 +13,7 @@ createApp({
         const paymentForm = ref({
             amount: '',
             method: 'efectivo',
-            date: new Date().toISOString().split('T')[0]
+            date: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0]
         });
         
         const form = ref({
@@ -150,7 +150,7 @@ createApp({
                     name: dayDate.toLocaleString('es-ES', { weekday: 'long' }).replace(/^\w/, c => c.toUpperCase()),
                     number: dayDate.getDate(),
                     date: dateStr,
-                    isToday: dateStr === new Date().toISOString().split('T')[0],
+                    isToday: dateStr === new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0],
                     events: dayEvents.map(e => {
                         const totalPaid = e.payments ? e.payments.reduce((sum, p) => sum + parseFloat(p.amount), 0) : 0;
                         return {
@@ -442,7 +442,7 @@ createApp({
 
         const viewEvent = (eventRaw) => {
             activeEvent.value = eventRaw;
-            paymentForm.value = { amount: '', method: 'efectivo', date: new Date().toISOString().split('T')[0] };
+            paymentForm.value = { amount: '', method: 'efectivo', date: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0] };
             isEventModalOpen.value = true;
         };
 

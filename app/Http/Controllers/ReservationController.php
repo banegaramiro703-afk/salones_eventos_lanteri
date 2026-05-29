@@ -44,7 +44,8 @@ class ReservationController extends Controller
             'total_amount' => 'required|numeric|min:0',
             'deposit_amount' => 'required|numeric|min:0', // Will be extracted
             'payment_method' => 'required|string|in:efectivo,transferencia,mixto', // Will be extracted
-            'status' => 'required|in:pending,confirmed,cancelled'
+            'status' => 'required|in:pending,confirmed,cancelled',
+            'notes' => 'nullable|string'
         ]);
 
         // STRICT VALIDATION: Prevent Double-Booking (Aquí es donde debes procesar el salto de día)
@@ -88,6 +89,7 @@ class ReservationController extends Controller
             'event_date' => 'sometimes|date',
             'start_time' => 'sometimes|date_format:H:i',
             'end_time' => 'sometimes|date_format:H:i',
+            'notes' => 'nullable|string',
             // ... otros campos
         ]);
 
