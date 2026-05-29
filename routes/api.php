@@ -14,5 +14,8 @@ Route::apiResource('reservations', ReservationController::class);
 Route::post('reservations/{id}/payments', [ReservationController::class, 'addPayment']);
 
 Route::get('/halls', function () {
+    if (Hall::count() === 0) {
+        \Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);
+    }
     return response()->json(Hall::all());
 });

@@ -6,8 +6,7 @@ cmds = ["composer install --no-dev --optimize-autoloader"]
 
 [phases.build]
 cmds = [
-    "php artisan config:cache",
-    "php artisan route:cache"
+    "echo 'Skipping config cache to allow dynamic env vars'"
 ]
 
 [start]
